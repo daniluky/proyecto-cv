@@ -7,13 +7,14 @@ function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const baseURL = import.meta.env.VITE_API_URL;
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     try {
-      const response = await axios.post('http://localhost:5050/api/admin/login', { username, password });
+      const response = await axios.post(`${baseURL}/admin/login`, { username, password });
       const token = response.data.token;
 
       // Guardar token en localStorage
@@ -22,6 +23,7 @@ function LoginPage() {
       // Redirigir al panel de administrador
       navigate('/admin');
     } catch (error) {
+      console.error('Error al iniciar sesión:', error);
       setErrorMsg('Credenciales incorrectas');
     }
   };
@@ -57,6 +59,13 @@ function LoginPage() {
           className="w-full bg-green-500 hover:bg-green-600 p-3 rounded font-semibold"
         >
           Entrar
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="w-full mt-4 bg-gray-600 hover:bg-gray-700 p-3 rounded font-semibold"
+        >
+          Volver a inicio
         </button>
       </form>
     </div>

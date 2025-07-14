@@ -1,8 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import CreateCV from './pages/CreateCV';
-import LoginPage from './pages/loginpage';  
+import LoginPage from './pages/loginpage';
 import AdminDashboard from './pages/AdminDashboard';
+import EditCVPage from './pages/editCVPages';
+import VistaPreviaCV from './pages/VistaPreviaCV';
+
 
 function App() {
   return (
@@ -12,6 +15,8 @@ function App() {
         <Route path="/crear-cv" element={<CreateCV />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/editar-cv/:id" element={<EditCVPage />} />
+        <Route path="/vista-previa/:id" element={<VistaPreviaCV />} />
       </Routes>
     </Router>
   );

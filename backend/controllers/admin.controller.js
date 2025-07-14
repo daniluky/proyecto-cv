@@ -9,7 +9,7 @@ exports.login = (req, res) => {
   const jwtSecret = process.env.JWT_SECRET;
 
   if (username === adminUser && password === adminPassword) {
-    const token = jwt.sign({ username }, jwtSecret, { expiresIn: '2h' });
+    const token = jwt.sign({ username, role: 'admin' }, jwtSecret, { expiresIn: '2h' });
     return res.status(200).json({ token });
   } else {
     return res.status(401).json({ error: 'Credenciales incorrectas' });

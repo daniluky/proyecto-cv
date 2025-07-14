@@ -1,21 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+
 function AdminDashboard() {
+  const baseURL = import.meta.env.VITE_API_URL;
   const [cvs, setCvs] = useState([]);
   const navigate = useNavigate();
-
-  const fetchCVs = async () => {
+  const fetchCVs = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5050/api/admin/cvs', {
+      const res = await axios.get(`${baseURL}/admin/cvs`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      console.log('res.data =>', res.data);
-      setCvs(res.data);
+
+      // Ordenar alfabéticamente por nombre (insensible a mayúsculas/minúsculas)
+      const sorted = res.data.sort((a, b) =>
+        a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+      );
+
+      setCvs(sorted);
     } catch (err) {
       console.error('Error al obtener los CVs:', err);
       if (err.response?.status === 401) {
@@ -23,7 +29,7 @@ function AdminDashboard() {
         navigate('/login');
       }
     }
-  };
+  }, [baseURL, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -35,7 +41,7 @@ function AdminDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/admin/cv/${id}`, {
+      await axios.delete(`${baseURL}/admin/cv/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCvs(cvs.filter((cv) => cv._id !== id));
@@ -44,18 +50,37 @@ function AdminDashboard() {
     }
   };
 
-  const handleDownload = (id) => {
-    const token = localStorage.getItem('token');
-    window.open(`/api/admin/cv/${id}/pdf?token=${token}`, '_blank');
+  const handleDownload = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${baseURL}/admin/cv/${id}/pdf`, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Crear URL de descarga
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CV_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('❌ Error al descargar el CV:', error);
+      alert('No se pudo descargar el CV');
+    }
   };
 
   const handleEdit = (id) => {
-    navigate(`/admin/editar-cv/${id}`);
+    navigate(`/editar-cv/${id}`);
   };
 
   useEffect(() => {
     fetchCVs();
-  }, []);
+  }, [fetchCVs]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
