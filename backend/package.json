@@ -1,7 +1,8 @@
 {
   "name": "proyecto-cv",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "launcher.js",
+  "bin": "launcher.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
@@ -21,5 +22,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
+  },
+  "pkg": {
+    "assets": [
+      "frontend/dist/**/*"
+    ]
   }
 }

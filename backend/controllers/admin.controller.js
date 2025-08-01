@@ -1,4 +1,3 @@
-const adminService = require('../services/admin.services');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -12,7 +11,7 @@ exports.login = (req, res) => {
     const token = jwt.sign({ username, role: 'admin' }, jwtSecret, { expiresIn: '2h' });
     return res.status(200).json({ token });
   } else {
-    return res.status(401).json({ error: 'Credenciales incorrectas' });
+    return res.status(401).json({ message: 'Credenciales incorrectas' });
   }
 };
 

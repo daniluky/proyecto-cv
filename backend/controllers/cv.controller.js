@@ -14,15 +14,6 @@ const crearCV = async (req, res) => {
   }
 };
 
-const obtenerCVs = async (req, res) => {
-  try {
-    const cvs = await cvService.obtenerCVs();
-    res.status(200).json(cvs);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 
 const obtenerTodosLosCVs = async (req, res) => {
   try {
@@ -98,7 +89,6 @@ const getCVById = async (req, res) => {
 
 module.exports = {
   crearCV,
-  obtenerCVs,
   obtenerTodosLosCVs,
   eliminarCV,
   descargarCVenPDF,

@@ -1,5 +1,4 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
 
 const generarCVenPDF = (cv, res) => {
   const doc = new PDFDocument({ margin: 40 });
@@ -37,8 +36,12 @@ const generarCVenPDF = (cv, res) => {
       doc.fillColor('#0D47A1').font('Helvetica-Bold').text(`${exp.cargo} - ${exp.empresa}`);
       doc.fillColor('black')
       if (exp.fechaInicio || exp.fechaFin) {
+        const formatFecha = (fecha) => {
+          if (fecha === '9999-12-31') return 'Actualidad';
+          return new Date(fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+        };
         const inicio = exp.fechaInicio ? new Date(exp.fechaInicio).toLocaleDateString() : '';
-        const fin = exp.fechaFin ? new Date(exp.fechaFin).toLocaleDateString() : '';
+        const fin = exp.fechaFin ? formatFecha(exp.fechaFin) : '';
         doc.font('Helvetica').text(`${inicio} - ${fin}`);
       }
 

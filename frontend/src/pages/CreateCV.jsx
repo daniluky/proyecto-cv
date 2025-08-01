@@ -157,7 +157,26 @@ function CreateCV() {
               </div>
               <div>
                 <label className="text-sm">Fecha de fin</label>
-                <input type="date" className="input" value={exp.fechaFin} onChange={(e) => handleArrayChange(e, index, 'fechaFin', 'experiencia')} />
+                <input
+                  type="date"
+                  className="input"
+                  value={exp.actual ? '' : exp.fechaFin}
+                  onChange={(e) => handleArrayChange(e, index, 'fechaFin', 'experiencia')}
+                  disabled={exp.actual}
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={exp.actual || false}
+                    onChange={(e) => {
+                      const updated = [...form.experiencia];
+                      updated[index].actual = e.target.checked;
+                      updated[index].fechaFin = e.target.checked ? '9999-12-31' : ''; // Establecer fecha especial o limpiar
+                      setForm({ ...form, experiencia: updated });
+                    }}
+                  />
+                  <label className="text-sm">Trabajo actual</label>
+                </div>
               </div>
               <div>
                 <label className="text-sm">Descripción</label>

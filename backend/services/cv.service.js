@@ -7,9 +7,6 @@ const crearCV = async (data) => {
   return { cv: nuevoCV };
 };
 
-const obtenerCVs = async () => {
-  return await CV.find();
-};
 
 const obtenerTodosLosCVs = async () => {
   return await CV.find();
@@ -32,4 +29,4 @@ const obtenerCVPorId = async (id) => {
   return cv;
 };
 
-module.exports = { crearCV, obtenerCVs, obtenerTodosLosCVs, eliminarCV, actualizarCV, obtenerCVPorId };
+module.exports = { crearCV, obtenerTodosLosCVs, eliminarCV, actualizarCV, obtenerCVPorId };
