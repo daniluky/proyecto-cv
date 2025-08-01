@@ -3,7 +3,7 @@ import Home from './pages/Home';
 import CreateCV from './pages/CreateCV';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
-import EditCVPage from './pages/EditCV';
+import EditCVPages from './pages/EditCVPages';
 import VistaPreviaCV from './pages/VistaPreviaCV';
 
 
@@ -15,7 +15,7 @@ function App() {
         <Route path="/crear-cv" element={<CreateCV />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/editar-cv/:id" element={<EditCVPage />} />
+        <Route path="/editar-cv/:id" element={<EditCVPages />} />
         <Route path="/vista-previa/:id" element={<VistaPreviaCV />} />
       </Routes>
     </Router>

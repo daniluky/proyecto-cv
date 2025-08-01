@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-function EditCV() {
+function EditCVPages() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState(null);
@@ -247,4 +247,4 @@ function EditCV() {
   );
 }
 
-export default EditCV;
+export default EditCVPages;
