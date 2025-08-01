@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import CreateCV from './pages/CreateCV';
-import LoginPage from './pages/loginpage';
+import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
-import EditCVPage from './pages/editCVPages';
+import EditCVPage from './pages/EditCV';
 import VistaPreviaCV from './pages/VistaPreviaCV';
 
 

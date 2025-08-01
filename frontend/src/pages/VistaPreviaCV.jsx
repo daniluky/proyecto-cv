@@ -21,6 +21,30 @@ function VistaPreviaCV() {
     fetchCV();
   }, [id, baseURL]);
 
+  const handleDownload = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${baseURL}/cv/${id}/pdf`, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Crear URL de descarga
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CV_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('❌ Error al descargar el CV:', error);
+      alert('No se pudo descargar el CV');
+    }
+  };
+
   if (!cv) return <div className="text-white p-8">Cargando CV...</div>;
 
   return (
@@ -85,6 +109,12 @@ function VistaPreviaCV() {
             className="bg-yellow-500 hover:bg-yellow-600 px-6 py-2 rounded-lg"
           >
             Modificar CV
+          </button>
+          <button
+            onClick={() => handleDownload(cv._id)}
+            className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-sm"
+          >
+            Descargar
           </button>
         </div>
       </div>
