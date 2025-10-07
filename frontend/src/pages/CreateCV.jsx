@@ -11,8 +11,8 @@ function CreateCV() {
     fechaNacimiento: '',
     telefono: '',
     ciudad: '',
-    habilidades: [''],
-    idiomas: [''],
+    habilidades: [],
+    idiomas: [],
     experiencia: [
       { empresa: '', cargo: '', fechaInicio: '', fechaFin: '', descripcion: '', habilidades: [''] }
     ],
@@ -50,9 +50,36 @@ function CreateCV() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
+    // Limpiar campos vacíos antes de enviar
+    const limpiarDatos = (form) => {
+      return {
+        ...form,
+        habilidades: form.habilidades?.filter(h => h.trim() !== '') || [],
+        idiomas: form.idiomas?.filter(i => i.trim() !== '') || [],
+        experiencia: form.experiencia
+          .filter(exp =>
+            exp.empresa?.trim() !== '' ||
+            exp.cargo?.trim() !== '' ||
+            exp.fechaInicio?.trim() !== '' ||
+            exp.fechaFin?.trim() !== '' ||
+            exp.descripcion?.trim() !== '' ||
+            (exp.habilidades && exp.habilidades.some(h => h.trim() !== ''))
+          ),
+        educacion: form.educacion
+          .filter(edu =>
+            edu.institucion?.trim() !== '' ||
+            edu.titulo?.trim() !== '' ||
+            edu.fechaInicio?.trim() !== '' ||
+            edu.fechaFin?.trim() !== '' ||
+            edu.descripcion?.trim() !== ''
+          )
+      };
+    };
 
-      const response = await axios.post(`${baseURL}/cv`, form);
+    const formLimpio = limpiarDatos(form);
+
+    try {
+      const response = await axios.post(`${baseURL}/cv`, formLimpio);
       const newCV = response.data.cv;
 
       console.log('✅ CV creado:', response.data);
@@ -97,13 +124,13 @@ function CreateCV() {
         {/* Habilidades */}
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Habilidades</h2>
-          <textarea className="input w-full" placeholder="Ej: Trabajo en equipo, Liderazgo, Organización, Planificación..." onChange={(e) => setForm({ ...form, habilidades: e.target.value.split(',').map(h => h.trim()) })} />
+          <textarea className="input w-full" placeholder="Ej: Trabajo en equipo, Liderazgo, Organización, Planificación..." onChange={(e) => setForm({ ...form, habilidades: e.target.value.split(',').map(h => h.trim()).filter(Boolean) })} />
         </div>
 
         {/* Idiomas */}
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Idiomas</h2>
-          <textarea className="input w-full" placeholder="Ej: Español, Inglés, Alemán..." onChange={(e) => setForm({ ...form, idiomas: e.target.value.split(',').map(i => i.trim()) })} />
+          <textarea className="input w-full" placeholder="Ej: Español, Inglés, Alemán..." onChange={(e) => setForm({ ...form, idiomas: e.target.value.split(',').map(i => i.trim()).filter(Boolean) })} />
         </div>
 
         {/* Educación */}
@@ -190,7 +217,7 @@ function CreateCV() {
         </div>
 
         {/* Botón enviar */}
-        < div className="mt-8 flex justify-center gap-4" >
+        <div className="mt-8 flex justify-center gap-4" >
           <button
             onClick={handleSubmit}
             className="bg-green-500 hover:bg-green-600 px-8 py-3 rounded-2xl font-semibold text-white shadow-xl transition"

@@ -49,6 +49,8 @@ function EditCVPages() {
           }))
         };
 
+        parsedData.habilidadesTexto = parsedData.habilidades?.join(', ') || '';
+
         setForm(parsedData);
       } catch (error) {
         console.error('❌ Error al cargar el CV:', error);
@@ -145,10 +147,10 @@ function EditCVPages() {
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Habilidades</h2>
           <textarea
-            className="input placeholder-gray-400w-full"
-            placeholder="Ej: Trabajo en equipo, Liderazgo, Organización, Planificación..."
-            value={form.habilidades.join(', ')}
-            onChange={(e) => setForm({ ...form, habilidades: e.target.value.split(',').map(h => h.trim()) })}
+            className="input placeholder-gray-400 w-full"
+            placeholder="Ej: Trabajo en equipo, Liderazgo, Organización..."
+            value={form.habilidadesTexto}
+            onChange={(e) => setForm({ ...form, habilidadesTexto: e.target.value })}
           />
         </div>
 

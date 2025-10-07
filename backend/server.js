@@ -19,6 +19,7 @@ app.use(cors(corsOptions));
 
 connectDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://${localIp}:${PORT}`);
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+    console.log(`IP local: http://${localIp}:${PORT}`);
   });
 });
