@@ -1,10 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { z } from 'zod';
+import { personalDataSchema, experienceItemSchema, educationItemSchema } from '../schemas/cvSchema';
+import StepIndicator from '../components/ui/StepIndicator';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import PersonalDataForm from '../components/wizard/PersonalDataForm';
+import ExperienceForm from '../components/wizard/ExperienceForm';
+import EducationForm from '../components/wizard/EducationForm';
+import SkillsForm from '../components/wizard/SkillsForm';
+import ThemeSelectionForm from '../components/wizard/ThemeSelectionForm';
+import CVPreview from '../components/wizard/CVPreview';
 
 function CreateCV() {
-  const baseURL = import.meta.env.VITE_API_URL;
+  const baseURL = import.meta.env.VITE_API_URL || '/api';
   const navigate = useNavigate();
+  const { id } = useParams(); // Obtener ID si estamos editando
+  const isEditing = !!id;
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
+  const [loading, setLoading] = useState(isEditing);
+
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -18,219 +37,232 @@ function CreateCV() {
     ],
     educacion: [
       { institucion: '', titulo: '', fechaInicio: '', fechaFin: '', descripcion: '' }
-    ]
+    ],
+    theme: 'green'
   });
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Cargar datos si estamos editando
+  useEffect(() => {
+    if (isEditing) {
+      const fetchCV = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${baseURL}/cv/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = response.data;
+
+          // Formatear fechas para los inputs (YYYY-MM-DD)
+          const formatDate = (dateString) => dateString ? dateString.split('T')[0] : '';
+
+          setForm({
+            ...data,
+            fechaNacimiento: formatDate(data.fechaNacimiento),
+            experiencia: data.experiencia.map(e => ({
+              ...e,
+              fechaInicio: formatDate(e.fechaInicio),
+              fechaFin: formatDate(e.fechaFin)
+            })),
+            educacion: data.educacion.map(e => ({
+              ...e,
+              fechaInicio: formatDate(e.fechaInicio),
+              fechaFin: formatDate(e.fechaFin)
+            }))
+          });
+        } catch (error) {
+          console.error('Error al cargar CV:', error);
+          toast.error('No se pudo cargar el CV para editar');
+          navigate('/admin');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchCV();
+    }
+  }, [id, isEditing, baseURL, navigate]);
+
+  const [errors, setErrors] = useState({});
+
+  const updateForm = (newData) => {
+    setForm(prev => ({ ...prev, ...newData }));
+    // Limpiar errores al escribir
+    if (Object.keys(errors).length > 0) {
+      setErrors({});
+    }
   };
 
-  const handlePhoneChange = (e) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 9) value = value.slice(0, 9);
+  const validateStep = () => {
+    setErrors({});
+    const newErrors = {};
+    let isValid = true;
 
-    const formatted = value
-      .replace(/(\d{3})(\d{3})(\d{0,3})/, (match, p1, p2, p3) => {
-        return [p1, p2, p3].filter(Boolean).join(' ');
+    if (currentStep === 1) {
+      const result = personalDataSchema.safeParse(form);
+      if (!result.success) {
+        isValid = false;
+        result.error.issues.forEach(issue => {
+          const key = issue.path.join('.');
+          newErrors[key] = issue.message;
+          toast.error(issue.message);
+        });
+      }
+    } else if (currentStep === 2) {
+      form.experiencia.forEach((exp, index) => {
+        // Validar solo si tiene algún campo relleno (ignorar filas vacías)
+        const isFilled = exp.empresa || exp.cargo || exp.fechaInicio || exp.descripcion;
+        if (isFilled) {
+          const result = experienceItemSchema.safeParse(exp);
+          if (!result.success) {
+            isValid = false;
+            result.error.issues.forEach(issue => {
+              const key = `${index}.${issue.path.join('.')}`;
+              newErrors[key] = issue.message;
+              toast.error(`Experiencia ${index + 1}: ${issue.message}`);
+            });
+          }
+        }
       });
+    } else if (currentStep === 3) {
+      form.educacion.forEach((edu, index) => {
+        const isFilled = edu.institucion || edu.titulo || edu.fechaInicio || edu.descripcion;
+        if (isFilled) {
+          const result = educationItemSchema.safeParse(edu);
+          if (!result.success) {
+            isValid = false;
+            result.error.issues.forEach(issue => {
+              const key = `${index}.${issue.path.join('.')}`;
+              newErrors[key] = issue.message;
+              toast.error(`Educación ${index + 1}: ${issue.message}`);
+            });
+          }
+        }
+      });
+    }
 
-    setForm((prev) => ({ ...prev, telefono: formatted }));
+    if (!isValid) {
+      setErrors(newErrors);
+    }
+    return isValid;
   };
 
-  const handleArrayChange = (e, index, field, section) => {
-    const updated = [...form[section]];
-    updated[index][field] = e.target.value;
-    setForm({ ...form, [section]: updated });
+  const nextStep = () => {
+    if (validateStep()) {
+      if (currentStep < totalSteps) setCurrentStep(prev => prev + 1);
+    }
   };
 
-  const addEntry = (section, emptyObject) => {
-    setForm({ ...form, [section]: [...form[section], emptyObject] });
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(prev => prev - 1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Limpiar campos vacíos antes de enviar
-    const limpiarDatos = (form) => {
+  const handleSubmit = async () => {
+    const limpiarDatos = (formData) => {
       return {
-        ...form,
-        habilidades: form.habilidades?.filter(h => h.trim() !== '') || [],
-        idiomas: form.idiomas?.filter(i => i.trim() !== '') || [],
-        experiencia: form.experiencia
-          .filter(exp =>
-            exp.empresa?.trim() !== '' ||
-            exp.cargo?.trim() !== '' ||
-            exp.fechaInicio?.trim() !== '' ||
-            exp.fechaFin?.trim() !== '' ||
-            exp.descripcion?.trim() !== '' ||
-            (exp.habilidades && exp.habilidades.some(h => h.trim() !== ''))
-          ),
-        educacion: form.educacion
-          .filter(edu =>
-            edu.institucion?.trim() !== '' ||
-            edu.titulo?.trim() !== '' ||
-            edu.fechaInicio?.trim() !== '' ||
-            edu.fechaFin?.trim() !== '' ||
-            edu.descripcion?.trim() !== ''
-          )
+        ...formData,
+        habilidades: formData.habilidades?.filter(h => h.trim() !== '') || [],
+        idiomas: formData.idiomas?.filter(i => i.trim() !== '') || [],
+        experiencia: formData.experiencia.filter(exp =>
+          exp.empresa?.trim() !== '' || exp.cargo?.trim() !== ''
+        ),
+        educacion: formData.educacion.filter(edu =>
+          edu.institucion?.trim() !== '' || edu.titulo?.trim() !== ''
+        )
       };
     };
 
     const formLimpio = limpiarDatos(form);
+    console.log('Enviando datos a:', `${baseURL}/cv/${isEditing ? id : ''}`);
+
+    const toastId = toast.loading(isEditing ? 'Actualizando CV...' : 'Creando CV...');
 
     try {
-      const response = await axios.post(`${baseURL}/cv`, formLimpio);
-      const newCV = response.data.cv;
+      let response;
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
 
-      console.log('✅ CV creado:', response.data);
-      alert('CV enviado con éxito');
+      if (isEditing) {
+        response = await axios.put(`${baseURL}/cv/${id}`, formLimpio, { headers });
+      } else {
+        response = await axios.post(`${baseURL}/cv`, formLimpio, { headers });
+      }
 
-      navigate(`/vista-previa/${newCV._id}`);
+      console.log('Respuesta:', response);
+
+      if (response.data) {
+        toast.success(isEditing ? '¡CV actualizado!' : '¡CV creado con éxito!', { id: toastId });
+        // Si editamos, volvemos al admin, si creamos, vamos a la vista previa
+        if (isEditing) {
+          navigate('/admin');
+        } else {
+          navigate(`/vista-previa/${response.data.cv._id}`);
+        }
+      } else {
+        throw new Error('Respuesta del servidor inválida');
+      }
+
     } catch (error) {
       console.error('❌ Error al enviar CV:', error);
-      alert('Error al enviar el CV');
+      toast.error('Error al guardar el CV. Revisa la consola.', { id: toastId });
     }
   };
 
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1: return <PersonalDataForm data={form} updateData={updateForm} errors={errors} />;
+      case 2: return <ExperienceForm data={form.experiencia} updateData={updateForm} errors={errors} />;
+      case 3: return <EducationForm data={form.educacion} updateData={updateForm} errors={errors} />;
+      case 4: return <SkillsForm data={form} updateData={updateForm} />;
+      case 5: return <ThemeSelectionForm currentTheme={form.theme} setTheme={updateForm} />;
+      default: return null;
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Cargando datos...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
-      <div className="max-w-4xl mx-auto bg-slate-800 p-6 rounded-2xl shadow-2xl">
-        <h1 className="text-4xl font-bold mb-8 text-center text-green-400">Crear Curriculum</h1>
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8 text-center text-green-400">
+          {isEditing ? 'Editar Curriculum' : 'Crear Curriculum'}
+        </h1>
 
-        {/* Datos personales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Columna Izquierda: Formulario */}
           <div>
-            <label className="text-sm">Nombre</label>
-            <input name="nombre" placeholder="Manuel Gomez Diaz" className="input" onChange={handleChange} />
-          </div>
-          <div>
-            <label className="text-sm">Email</label>
-            <input name="email" placeholder="Manuel@gmail.com" className="input" onChange={handleChange} />
-          </div>
-          <div>
-            <label className="text-sm">Fecha de nacimiento</label>
-            <input type="date" name="fechaNacimiento" className="input" onChange={handleChange} />
-          </div>
-          <div>
-            <label className="text-sm">Teléfono</label>
-            <input name="telefono" placeholder="678123456" className="input" value={form.telefono} onChange={handlePhoneChange} />
-          </div>
-          <div>
-            <label className="text-sm">Ciudad</label>
-            <input name="ciudad" placeholder="Sevilla" className="input" onChange={handleChange} />
-          </div>
-        </div>
+            <StepIndicator currentStep={currentStep} steps={['Datos', 'Experiencia', 'Educación', 'Habilidades', 'Diseño']} />
 
-        {/* Habilidades */}
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2">Habilidades</h2>
-          <textarea className="input w-full" placeholder="Ej: Trabajo en equipo, Liderazgo, Organización, Planificación..." onChange={(e) => setForm({ ...form, habilidades: e.target.value.split(',').map(h => h.trim()).filter(Boolean) })} />
-        </div>
+            <Card className="mb-8 min-h-[400px]">
+              {renderStep()}
+            </Card>
 
-        {/* Idiomas */}
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2">Idiomas</h2>
-          <textarea className="input w-full" placeholder="Ej: Español, Inglés, Alemán..." onChange={(e) => setForm({ ...form, idiomas: e.target.value.split(',').map(i => i.trim()).filter(Boolean) })} />
-        </div>
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="secondary"
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className={currentStep === 1 ? 'opacity-0' : ''}
+              >
+                ← Anterior
+              </Button>
 
-        {/* Educación */}
-        <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">Educación</h2>
-          {form.educacion.map((edu, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-sm">Institución</label>
-                <input className="input" placeholder="Universidad de Sevilla" value={edu.institucion} onChange={(e) => handleArrayChange(e, index, 'institucion', 'educacion')} />
-              </div>
-              <div>
-                <label className="text-sm">Título</label>
-                <input className="input" placeholder="Ingerniería Mecánica" value={edu.titulo} onChange={(e) => handleArrayChange(e, index, 'titulo', 'educacion')} />
-              </div>
-              <div>
-                <label className="text-sm">Fecha de inicio</label>
-                <input type="date" className="input" value={edu.fechaInicio} onChange={(e) => handleArrayChange(e, index, 'fechaInicio', 'educacion')} />
-              </div>
-              <div>
-                <label className="text-sm">Fecha de fin</label>
-                <input type="date" className="input" value={edu.fechaFin} onChange={(e) => handleArrayChange(e, index, 'fechaFin', 'educacion')} />
-              </div>
-              <div>
-                <label className="text-sm">Descripción</label>
-                <textarea className="input md:col-span-2" placeholder="Ej: Grado en Ingeniería Mecánica, conocimientos en programación..." value={edu.descripcion} onChange={(e) => handleArrayChange(e, index, 'descripcion', 'educacion')} />
-              </div>
+              {currentStep < totalSteps ? (
+                <Button onClick={nextStep}>
+                  Siguiente →
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} variant="primary">
+                  {isEditing ? 'Guardar Cambios' : 'Finalizar y Ver CV'}
+                </Button>
+              )}
             </div>
-          ))}
-          <button className="text-sm bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg mt-2" onClick={() => addEntry('educacion', { institucion: '', titulo: '', fechaInicio: '', fechaFin: '', descripcion: '' })}>
-            + Añadir educación
-          </button>
-        </div>
+          </div>
 
-        {/* Experiencia */}
-        <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">Experiencia laboral</h2>
-          {form.experiencia.map((exp, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-sm">Empresa</label>
-                <input className="input" placeholder="Construcciones y Servicios" value={exp.empresa} onChange={(e) => handleArrayChange(e, index, 'empresa', 'experiencia')} />
-              </div>
-              <div>
-                <label className="text-sm">Cargo</label>
-                <input className="input" placeholder="Encargado de mantenimiento" value={exp.cargo} onChange={(e) => handleArrayChange(e, index, 'cargo', 'experiencia')} />
-              </div>
-              <div>
-                <label className="text-sm">Fecha de inicio</label>
-                <input type="date" className="input" value={exp.fechaInicio} onChange={(e) => handleArrayChange(e, index, 'fechaInicio', 'experiencia')} />
-              </div>
-              <div>
-                <label className="text-sm">Fecha de fin</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={exp.actual ? '' : exp.fechaFin}
-                  onChange={(e) => handleArrayChange(e, index, 'fechaFin', 'experiencia')}
-                  disabled={exp.actual}
-                />
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={exp.actual || false}
-                    onChange={(e) => {
-                      const updated = [...form.experiencia];
-                      updated[index].actual = e.target.checked;
-                      updated[index].fechaFin = e.target.checked ? '9999-12-31' : ''; // Establecer fecha especial o limpiar
-                      setForm({ ...form, experiencia: updated });
-                    }}
-                  />
-                  <label className="text-sm">Trabajo actual</label>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm">Descripción</label>
-                <textarea className="input md:col-span-2" placeholder="Arreglo y mantenimiento de equipos de construcción" value={exp.descripcion} onChange={(e) => handleArrayChange(e, index, 'descripcion', 'experiencia')} />
-              </div>
-            </div>
-          ))}
-          <button className="text-sm bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg mt-2" onClick={() => addEntry('experiencia', { empresa: '', cargo: '', fechaInicio: '', fechaFin: '', descripcion: '', habilidades: [''] })}>
-            + Añadir experiencia
-          </button>
-        </div>
-
-        {/* Botón enviar */}
-        <div className="mt-8 flex justify-center gap-4" >
-          <button
-            onClick={handleSubmit}
-            className="bg-green-500 hover:bg-green-600 px-8 py-3 rounded-2xl font-semibold text-white shadow-xl transition"
-          >
-            Enviar
-          </button>
-
-          <button
-            onClick={() => navigate('/')}
-            className="bg-gray-500 hover:bg-gray-600 px-8 py-3 rounded-2xl font-semibold text-white shadow-xl transition"
-          >
-            Cancelar
-          </button>
+          {/* Columna Derecha: Vista Previa */}
+          <div className="hidden lg:block">
+            <CVPreview data={form} />
+          </div>
         </div>
       </div>
     </div>
@@ -238,4 +270,3 @@ function CreateCV() {
 }
 
 export default CreateCV;
-

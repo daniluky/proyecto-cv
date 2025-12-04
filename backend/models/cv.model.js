@@ -27,6 +27,7 @@ const cvSchema = new mongoose.Schema({
   educacion: [educacionSchema],
   habilidades: [String],
   idiomas: [String],
+  theme: { type: String, default: 'green' },
   adminId: String
 }, { timestamps: true });
 
