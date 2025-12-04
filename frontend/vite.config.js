@@ -6,5 +6,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     cors: true,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://backend:5050',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });

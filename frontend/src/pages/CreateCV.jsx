@@ -192,7 +192,7 @@ function CreateCV() {
         toast.success(isEditing ? '¡CV actualizado!' : '¡CV creado con éxito!', { id: toastId });
         // Si editamos, volvemos al admin, si creamos, vamos a la vista previa
         if (isEditing) {
-          navigate('/admin');
+          navigate(`/vista-previa/${id}`);
         } else {
           navigate(`/vista-previa/${response.data.cv._id}`);
         }
@@ -260,7 +260,7 @@ function CreateCV() {
           </div>
 
           {/* Columna Derecha: Vista Previa */}
-          <div className="hidden lg:block">
+          <div>
             <CVPreview data={form} />
           </div>
         </div>
